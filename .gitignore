@@ -1,4 +1,9 @@
 **/wifi_passive_trajectory_node.csv
+**/nodes.csv
+**/nodes.json
 **/data/*
 **/data/
 **/data
+**/src/
+**/src/*
+**/src
