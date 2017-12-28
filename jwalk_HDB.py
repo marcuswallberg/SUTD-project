@@ -45,6 +45,12 @@ jwalkArea = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'L', 'M', 'N', 'O', 'R', 'S', 'T
 HDBArea = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n']
 # ----------------------------------------------------------------------------------------------
 
+# Some saved values
+# ----------------------------------------------------------------------------------------------
+averageBridgeTime = [99.01482453496001, 79.64656635224834, 116.42084775086505, 65.2228693747511, 
+					63.19306946584489, 118.37664715593577, 85.67405063291139]
+# ----------------------------------------------------------------------------------------------
+
 def mainPandas():
 	"""
 	Some functions run without a reader as argument, these functions are using pandas
@@ -53,6 +59,8 @@ def mainPandas():
 	The pandas data have exported every trajectory as rows, where every trajectory has it's person's ID
 	To follow a person through the trajectory one could either loop through every row and stop the the 
 	ID is different, or get all the trajectories for that ID for one day.
+
+	It is required to call exportStarttime() and jsonToCsv() before calling these functions.
 	"""
 	exportStarttime()	# Only needs to run this once, saves all trajectories as json
 	jsonToCsv()			# Reading the exported json-file and saves it as a csv-file, takes less space
@@ -70,8 +78,7 @@ def main():
 		next( jwalkReader )		# Remove the first line, which is info data
 		
 		# Call the function with jwalkReader as an argument
-		AGE( jwalkReader )
-
+		getAveragePerson( jwalkReader )
 
 # ----------------
 # PANDAS FUNCTIONS 
@@ -98,6 +105,10 @@ def plotTimeHDB_jwalk():
 
 
 def checkHDB_jwalk_then():
+	"""
+	This function prints all the nodes that are passed after coming from HDB to jwalk
+	It prints the result for each day from date(2017,4,15) and the following 12 days
+	"""
 	columns = ['duration', 'take_time', 'stay_node', 'next_node', 'starttime', 'endtime', 'id']
 	df = pd.read_csv( csvApril, usecols = columns )
 	df['date'] = df.starttime.apply( date.fromtimestamp )
@@ -111,10 +122,11 @@ def checkHDB_jwalk_then():
 		print( dfOneDay[['duration', 'take_time', 'stay_node', 'id']].describe( include='all' ) )
 		print( dfOneDay.stay_node.value_counts() )
 		print()
-		print()
-		print()
 
-def checkB():
+def checkDates():
+	"""
+	Prints some facts about the data
+	"""
 	columns = ['duration', 'take_time', 'stay_node', 'next_node', 'starttime', 'endtime']
 	df = pd.read_csv( csvSrc2, usecols = columns )
 	df['date'] = df.starttime.apply( date.fromtimestamp )
@@ -130,6 +142,9 @@ def checkB():
 	print( df.date.min() )
 
 def jan23():
+	"""
+	Prints the Pandas description of the same day of the month from 9, 23 and 30 of January
+	"""
 	columns = ['duration', 'take_time', 'stay_node', 'next_node', 'starttime', 'endtime']
 	df = pd.read_csv( csvSrc, usecols = columns )
 	# df = df[  ]
@@ -145,6 +160,9 @@ def jan23():
 	print(dfJan30.describe(include='all'))
 
 def HDBcross( df = pd.DataFrame() ):
+	"""
+	Prints a histogram from the crossing from HDB to jwalk
+	"""
 	if df.empty:
 		df = getDF()
 	cross = {}
@@ -159,8 +177,13 @@ def HDBcross( df = pd.DataFrame() ):
 	plt.show()
 
 def everyDayHDB():
+	"""
+	=====================
+	NOT COMPLETE FUNCTION
+	=====================
+	This function could be used to loop through every day of the data
+	"""
 	df = getDF()
-
 	increment = timedelta(1) # One day increment
 	startDate = df.starttime.min().date() + increment
 	# Loops through every day of the data
@@ -169,7 +192,10 @@ def everyDayHDB():
 		HDBcross( dfOneDay )
 		startDate += increment
 
-def perDay():
+def jwalkToOrBackFromHDBweekDay():
+	"""
+	This plots histogram over the frequency of each weekday that people are passing from jwalk to HDB or the reverse
+	"""
 	df = pd.read_csv( csvSrc )
 	df = df[ ['duration', 'take_time', 'stay_node', 'next_node', 'starttime', 'endtime'] ]
 	# df['date'] = df.starttime.apply( date.fromtimestamp )
@@ -197,18 +223,33 @@ def perDay():
 	df2.plot(kind='bar')
 	plt.show()
 
-def getDF( src = csvSrc ):
+def getDF( src = csvApril ):
+	"""
+	===============
+	HELPER FUNCTION
+	===============
+	"""
 	df = pd.read_csv( src )
 	df = df[ ['duration', 'take_time', 'stay_node', 'next_node', 'starttime', 'endtime'] ]
 	df = toTimeStamp( df )
 	return df
 
 def toTimeStamp( DataFrame ):
+	"""
+	===============
+	HELPER FUNCTION
+	===============
+	"""
 	DataFrame.starttime = pd.to_datetime( DataFrame.starttime, unit = 's' )
 	DataFrame.endtime = pd.to_datetime( DataFrame.endtime, unit = 's' )
 	return DataFrame
 
 def describe():
+	"""
+	===============
+	HELPER FUNCTION
+	===============
+	"""
 	df = pd.read_csv( csvSrc, usecols = [0,1,3,5,6] )
 	print( df.columns.values )
 	print( df.describe( include = 'all' ) )
@@ -227,7 +268,7 @@ def readCompare():
 
 def spikes():
 	"""
-	Prints spikes!
+	This function is used to look for spikes bridge crossing timings
 	"""
 	print("Reading the csv-file")
 	df = pd.read_csv( csvSrc )
@@ -246,23 +287,22 @@ def spikes():
 	# Take the median of columns: axis = 1 (rows = 0)
 	print( df['take_time'].median( ) )
 
-def readNodes():
-	print("Reading the json-file")
+def jsonToCsv( jsonSrc = jsonSrc, dest = './src/april_15-26.csv' ):
+	"""
+	Call this function after calling exportstarttime()
+	"""
+	print("Reading the csv-file")
 	df = pd.read_json( jsonSrc )
-	# print( df.columns )
-	# print( df.head() )
-	# print( df.describe())
 
-	print("Filtering")
-	query = df[ (df.take_time < 500) & (df.duration < 500) ]
-	print( query.columns )
-	print( query.head() )
-	print( query.describe())
+	print("Writing")
+	df.to_csv( dest )
+	print("Done writing the file to:", dest)
 
-	# print( df.stay_node.unique() )
-	print( query.shape )
-
-def exportStarttime2():
+def exportStarttime():
+	"""
+	Exports the starttime to rows using json format use jsonToCsv() to read the json file and export as a new csv
+	CSV is faster and requires less space 
+	"""
 	# df = pd.read_csv( src, usecols = [3], index_col = None, nrows = None )
 	df = pd.read_csv( src, nrows = None )
 	dest = './src/nodes3.json'
@@ -284,29 +324,17 @@ def exportStarttime2():
 	df2 = pd.read_json( dest )
 	print( "Exported and verified to:", dest )
 
-def exportStarttime():
-	df = pd.read_csv( src, usecols = [3], index_col = None, nrows = None )
-	dest = './src/nodes3.json'
-	print("Starting export")
-	j = list(df['starttime'])
-	with open(dest, 'w') as f:
-		writeString = ""
-		f.write('[')
-		for nodes in j:
-			writeString += nodes.strip('[]') + ','
-		writeString = writeString.strip(',') + ']'
-		f.write(writeString)
-
-	# Checking if the json is readable
-	df2 = pd.read_json( dest )
-	print( "Exported and verified to:", dest )
-
 # END OF THE PANDAS FUNCTIONS
 # ---------------------------
 
 # -------------------------
 # PYTHON FOR LOOP FUNCTIONS
+
 def printNormalSpikes2( reader ):
+	"""
+	Looking for some spikes, there were some unwanted spikes in the data. 
+	This is just used to plot those spikes
+	"""
 	peaktime = 90
 	peakNodes = [[] for _ in bridges ]
 	for row in reader:
@@ -325,6 +353,10 @@ def printNormalSpikes2( reader ):
 		print("")
 
 def printNormalSpikes( reader ):
+	"""
+	Looking for some spikes, there were some unwanted spikes in the data. 
+	This is just used to plot those spikes
+	"""
 	peaktime = 90
 	peakNodes = [[] for _ in bridges ]
 	for row in reader:
@@ -342,15 +374,11 @@ def printNormalSpikes( reader ):
 			print( choice( peakNodes[i] ) )
 		print("")
 
-def jsonToCsv( jsonSrc = jsonSrc, dest = './src/april_15-26.csv' ):
-	print("Reading the csv-file")
-	df = pd.read_json( jsonSrc )
-
-	print("Writing")
-	df.to_csv( dest )
-	print("Done writing the file to:", dest)
-
 def AGE(reader):
+	"""
+	This function plots a histogram of the people passing through the hospital 
+	Call this multiple times and comment our the other two hospitalExit arrays below
+	"""
 	Hospitals = ["L", "M", "N", "O"]		
 	hospitalExit = [["G", "F", "R", "S"], ["A", "B"]]	# G and A
 	hospitalExit = [["G", "F", "R", "S"], ["E", "C", "T", "D"]]	# G and E
@@ -416,6 +444,9 @@ def AGE(reader):
 	plt.show()
 
 def InsideOutsideInside(reader):
+	"""
+	Plots a histogram of time of the day that people are going inside, outside and then inside of the hospital area
+	"""
 	Hospitals = ["L", "M", "N", "O"]
 	notHostpitals = ["G", "E", "A", "B", "C", "D", "R", "S", "T", "F"]
 	weekday = []
@@ -457,6 +488,9 @@ def InsideOutsideInside(reader):
 	plt.show()
 
 def OutsideInsideOutside(reader):
+	"""
+	Plots a histogram of time of the day that people are going outside, inside and then outside of the hospital area
+	"""
 	Hospitals = ["L", "M", "N", "O"]
 	notHostpitals = ["G", "E", "A", "B", "C", "D", "R", "S", "T", "F"]
 	weekday = []
@@ -497,46 +531,10 @@ def OutsideInsideOutside(reader):
 	plt.hist(weekend)	
 	plt.show()
 
-
-def countHoursPerBuildingOLD(reader):
-	Hospitals = ["L", "M", "N", "O"]
-	hospitalExit = ["G", "E", "A"]
-	weekday = []
-	weekend = []
-	totalWeekday = []
-	totalWeekend = []
-	for row in reader:
-		current = json.loads( row[3] )
-		dayType = datetime.fromtimestamp( int( row[2] ) ).weekday()
-		insideOfHospital = False
-		starttime = 0
-
-		for c in current:
-			staynode = c['stay_node']
-
-			if staynode in hospitalExit and insideOfHospital:
-				duration = int( c['starttime'] ) - starttime
-				t = int( datetime.fromtimestamp( int(c['starttime']) ).hour )
-				if duration < 300:
-					if dayType < 5:
-						weekday.append(t)
-					else:
-						weekend.append(t)
-
-			if staynode in Hospitals:
-				insideOfHospital = True
-				starttime = int( c['starttime'] )
-
-	bins = [x for x in range(24)]
-
-	weekend = np.array(weekend)
-	weekday = np.array(weekday)
-
-	plt.hist(weekday, bins = bins)
-	plt.hist(weekend, bins = bins)
-	plt.show()
-
 def countHours(reader):
+	"""
+	Plots the histogram of when people are moving around jwalk
+	"""
 	weekday = []
 	weekend = []
 	for row in reader:
@@ -557,6 +555,9 @@ def countHours(reader):
 	plt.show()
 
 def getBuildingIndex(node):
+	"""
+	Helper function to personDetection()
+	"""
 	if not node:
 		return None
 	for index, b in enumerate(buildings):
@@ -565,6 +566,9 @@ def getBuildingIndex(node):
 	return None
 
 def personDetection(reader):
+	"""
+	Counts how many buildings one person are passing
+	"""
 	print("Getting person detection time ")
 	profiles = []
 	for row in reader:
@@ -602,15 +606,16 @@ def personDetection(reader):
 			f.write( json.dumps(person) )
 			f.write( "\n" )
 
-# Outputs 
 def getAveragePerson(reader):
+	"""
+	Plots the average bridge person passing each bridge
+	"""
 	print("Getting Average bridge time per person")
 	bridgeProfiles = {}
-	for row in reader:
+	for row in tqdm( reader ):
 		id = row[4]
 		linuxTime = int( row[2] )
 		current = json.loads( row[3] )
-
 		weekday = []
 		hour = []
 		normalizedTime = []
@@ -642,7 +647,7 @@ def getAveragePerson(reader):
 		h = d[2]	# List of hours
 		average = sum( times ) / len( times )
 		w = np.argmax( np.bincount(w) )		# Getting the most frequent weekday
-		# h = np.argmax( np.bincount(h) )		# Getting the most frequent hour
+		h = np.argmax( np.bincount(h) )		# Getting the most frequent hour
 		h = sum( h ) / len( h )
 		averageBridgeTimePerPerson.append( [average, int(w), int(h)] )
 
@@ -651,17 +656,26 @@ def getAveragePerson(reader):
 			f.write( json.dumps(person) )
 			f.write( "\n" )
 
-def checkDutation(reader):
+def checkDuration(reader):
+	"""
+	Plots the take time for all data
+	This function calls the function plotDuration for plotting
+	"""
 	duration = []
 	for row in reader:
 		nodes = json.loads(row[3])
 		c = choice(nodes)
 		if int( c['take_time'] ) < 500:
 			duration.append( int(c['take_time']) )
-
 	plotDuration(duration)
 
 def plotDuration(duration):
+	"""
+	===============
+	HELPER FUNCTION
+	===============
+	Call the function checkDuration() that calls this function
+	"""
 	sns.set()						# Making the plots look nice (using seaborn)
 	binwidth = 1					# Setting for the histogram plot
 
@@ -671,6 +685,9 @@ def plotDuration(duration):
 	plt.show()
 	
 def getAverageBridgeTime(reader):
+	"""
+	This function gets all the average bridge timings in jwalk area
+	"""
 	print("Getting Average bridge time")
 	i = 0
 
@@ -703,8 +720,10 @@ def getAverageBridgeTime(reader):
 	print(bridgeAverages)
 	plotBridgeTimings(bridgeTimings)
 
-# Plotting the bridge duration histogram times of all the bridges
 def plotBridgeTimings(bridgeTimings):
+	""" 
+	Plotting the bridge duration histogram times of all the bridges
+	"""
 	sns.set()						# Making the plots look nice (using seaborn)
 	binwidth = 1					# Setting for the histogram plot
 	f, axarr = plt.subplots(3, 3)	# The general plot
@@ -716,36 +735,10 @@ def plotBridgeTimings(bridgeTimings):
 		if i % 3 == 2:
 			j += 1
 
-	plt.ylim(0, 5000)
+	plt.ylim(0, 5000)	# Making a y limit
 	plt.show()
 
-# I'm going to fix this later, this is from the old code
-def getSomeBuildingData(reader):
-	people = []	
-	i = 0
 
-	for row in reader:
-		current = json.loads(row[3])
-		weekday = json.loads(row[2])
-
-		# Ignore all the paths that is not of length 1
-		if (len(current) != 1):
-			p = [ 0 ] * ( 4 )
-
-			for c in current:
-				last = ""
-				for index, building in enumerate(buildings):
-					if c['stay_node'] in building and c['next_node'] in building:
-						if last not in building:
-							if p[2] == 0:
-								people.append(p)
-							p[0] = date.fromtimestamp(int(weekday)).weekday()
-							p[1] = int( c['starttime'] )
-							p[2] += int( c['duration'] )
-							p[3] = index	# Number of the building
-						else:
-							p[2] += int( c['duration'] )
-		i += 1
 
 # To run the file run either the mainPandas() or main()
 if __name__ == "__main__":
